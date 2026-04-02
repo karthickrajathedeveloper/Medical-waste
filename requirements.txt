@@ -4,3 +4,4 @@ torch
 torchvision
 ultralytics
 inference-sdk
+aiortc

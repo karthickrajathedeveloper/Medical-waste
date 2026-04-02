@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Medical Waste Detection</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header Section -->
+        <header class="glass-panel header">
+            <h1>⚕️ Smart Medical Waste Tracker</h1>
+            <p>Real-time AI Analysis via Roboflow Serverless</p>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            
+            <!-- Video Container -->
+            <div class="glass-panel video-container">
+                <div class="panel-header">
+                    <span class="live-indicator"></span>
+                    <h2>Live Camera Feed</h2>
+                </div>
+                <div class="video-wrapper">
+                    <!-- This calls the Flask endpoint that streams the modified webcam images -->
+                    <img src="{{ url_for('video_feed') }}" alt="Webcam Loading..." class="live-video">
+                </div>
+            </div>
+
+            <!-- Detection Status Panel -->
+            <div class="glass-panel status-container">
+                <h2>Currently Detected</h2>
+                <div class="status-box">
+                    <p id="class-name">Waiting for data...</p>
+                </div>
+                <div class="info">
+                    <p>AI detects objects continuously and confirms the majority result every 5 seconds to prevent flickering.</p>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+    
+    <script>
+        const classNameElement = document.getElementById('class-name');
+        
+        // Fetch the latest detected class every 1 second from Flask
+        setInterval(async () => {
+            try {
+                const response = await fetch('/latest_detection');
+                const data = await response.json();
+                
+                const currentText = classNameElement.innerText;
+                const newText = data.detected_class;
+                
+                // Only update and animate if the text changes
+                if (currentText !== newText) {
+                    classNameElement.innerText = newText;
+                    
+                    // Trigger a smooth pop animation
+                    classNameElement.classList.remove('pop-animation');
+                    void classNameElement.offsetWidth; // trigger reflow
+                    classNameElement.classList.add('pop-animation');
+                }
+                
+                // Change color based on what is detected
+                if (newText.includes("No Waste")) {
+                    classNameElement.style.color = "#94a3b8"; // gray out if nothing
+                } else if (newText.includes("Waiting")) {
+                    classNameElement.style.color = "#fbbf24"; // yellow for waiting
+                } else {
+                    classNameElement.style.color = "#34d399"; // pop green for detected items
+                }
+                
+            } catch (error) {
+                console.error("Error fetching detection data:", error);
+                classNameElement.innerText = "Connection lost...";
+                classNameElement.style.color = "#ef4444";
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
