@@ -1,0 +1,9 @@
+{
+    "editor.fontSize": 16,
+    "editor.fontFamily": "Consolas, 'Courier New', monospace",
+    "chat.editor.fontSize": 16,
+    "debug.console.fontSize": 16,
+    "terminal.integrated.fontSize": 16,
+    "debug.console.lineHeight": 1,
+    "terminal.integrated.lineHeight": 1
+}
