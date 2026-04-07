@@ -6,6 +6,13 @@ import time
 from collections import Counter
 from inference_sdk import InferenceHTTPClient
 from inference_sdk.webrtc import WebcamSource, StreamConfig
+import serial
+
+
+ser = serial.Serial('COM67', 115200, timeout=1)
+
+def send_uart(angle):
+    ser.write((str(angle) + '\n').encode())
 
 app = Flask(__name__)
 
@@ -69,16 +76,22 @@ def run_roboflow():
                     # Apply user's custom naming rules
                     if raw_lower == "cotton":
                         latest_class = "Cotton Waste"
+                        send_uart(0)
                     elif raw_lower == "saline":
                         latest_class = "Saline Waste"
+                        send_uart(90)
                     elif raw_lower == "syringe n glass":
                         latest_class = "Syringe Waste"
+                        send_uart(180)
                     elif raw_lower == "ampoule":
                         latest_class = "Ampoule Waste"
+                        send_uart(90)
                     elif raw_lower == "iv":
                         latest_class = "IV Waste"
+                        send_uart(180)
                     else:
                         latest_class = "General Waste"
+                        send_uart(0)
                 else:
                     latest_class = "No Waste Detected"
                 
