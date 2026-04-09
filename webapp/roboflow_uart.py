@@ -83,7 +83,7 @@ def run_system():
             # Decision Logic
             if raw_lower == "cotton":
                 latest_class = "Cotton Waste"
-                send_uart(0)
+                send_uart(180)
 
             elif raw_lower == "saline":
                 latest_class = "Saline Waste"
@@ -95,11 +95,11 @@ def run_system():
 
             elif raw_lower == "ampoule":
                 latest_class = "Ampoule Waste"
-                send_uart(90)
+                send_uart(0)
 
             elif raw_lower == "iv":
                 latest_class = "IV Waste"
-                send_uart(180)
+                send_uart(90)
 
             elif raw_lower is None:
                 latest_class = "No Waste Detected"
