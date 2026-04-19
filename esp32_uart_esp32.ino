@@ -5,88 +5,91 @@ Servo doorServo;
 
 String input = "";
 
+// Pins
 #define IR_PIN 5
 #define LED_PIN 2
-#define degree_90 35
-#define degree_180 34
-#define degree_0 39
+#define BTN_90 13
+#define BTN_180 14
+#define BTN_0 27
 
-unsigned long lastDataTime = 0;
+// States
 bool irDetected = false;
-bool timeoutActionDone = false;
+bool lastIrState = HIGH;
+
 unsigned long irStartTime = 0;
-unsigned long dataSendTime = 0;
-bool lastIrState = HIGH;  //  for edge detection
+unsigned long lastDataTime = 0;
+unsigned long doorTimer = 0;
+
+bool doorOpen = false;
+bool timeoutDone = false;
 
 void setup() {
   Serial.begin(115200);
 
   pinMode(IR_PIN, INPUT);
-  pinMode(degree_90, INPUT);
-  pinMode(degree_180, INPUT);
-  pinMode(degree_0, INPUT);
   pinMode(LED_PIN, OUTPUT);
+
+  pinMode(BTN_90, INPUT_PULLUP);
+  pinMode(BTN_180, INPUT_PULLUP);
+  pinMode(BTN_0, INPUT_PULLUP);
 
   myServo.attach(18);
   doorServo.attach(19);
 
   myServo.write(0);
   doorServo.write(180);
+
+  Serial.println("System Ready");
 }
 
 void loop() {
 
+  // ================= IR SENSOR =================
   int irState = digitalRead(IR_PIN);
-  int dg_90 = digitalRead(degree_90);
-  int dg_180 = digitalRead(degree_180);
-  int dg_0 = digitalRead(degree_0);
 
-  // IR Edge Detection (ONLY ONCE)
   if (irState == LOW && lastIrState == HIGH) {
-    if (millis() - dataSendTime > 5000) {
-      Serial.println("Detected");
-
-      irDetected = true;
-      irStartTime = millis();
-      dataSendTime = millis();
-    }
+    Serial.println("IR Detected");
+    irDetected = true;
+    irStartTime = millis();
+    timeoutDone = false;
   }
 
   if (irState == HIGH && lastIrState == LOW) {
+    Serial.println("IR Cleared");
     irDetected = false;
-    timeoutActionDone = false;
+    doorClose();
   }
 
   lastIrState = irState;
 
-  //  Button Control
-  if (dg_90 == LOW) {
-    Serial.println("90");
-    moveAndOpen(90);
-  } else if (dg_180 == LOW) {
-    Serial.println("180");
-    moveAndOpen(180);
-  } else if (dg_0 == HIGH) {
-    Serial.println("0");
-    moveAndOpen(0);
+  // ================= BUTTON CONTROL =================
+  if (digitalRead(BTN_90) == LOW) {
+    Serial.println("Button 90");
+    moveServo(90);
   }
 
-  //  Default close
-  if (!irDetected && dg_90 && dg_180 && dg_0) {
-    doorServo.write(180);
+  if (digitalRead(BTN_180) == LOW) {
+    Serial.println("Button 180");
+    moveServo(180);
   }
 
-  //  UART Read
+  if (digitalRead(BTN_0) == LOW) {
+    Serial.println("Button 0");
+    moveServo(0);
+  }
+
+  // ================= UART READ =================
   while (Serial.available()) {
     char c = Serial.read();
 
     if (c == '\n') {
+      Serial.print("Received: ");
+      Serial.println(input);
+
       int angle = input.toInt();
 
-      lastDataTime = millis();  //  important fix
-
-      if (irDetected && angle >= 0 && angle <= 180) {
-        moveAndOpen(angle);
+      if (angle >= 0 && angle <= 180) {
+        moveServo(angle);
       }
 
       input = "";
@@ -95,34 +98,47 @@ void loop() {
     }
   }
 
-  // Timeout Logic
-  if (irDetected && !timeoutActionDone) {
-    if ((millis() - irStartTime > 17000) && (millis() - lastDataTime > 17000)) {
-
-      Serial.println("Timeout - No UART data");
-
-      moveAndOpen(0);
-
-      timeoutActionDone = true;
+  // ================= AUTO TIMEOUT =================
+  if (irDetected && !timeoutDone) {
+    if (millis() - irStartTime > 10000 && millis() - lastDataTime > 10000) {
+      Serial.println("Timeout → Reset");
+      moveServo(0);
+      timeoutDone = true;
     }
+  }
+
+  // ================= AUTO DOOR CLOSE =================
+  if (doorOpen && millis() - doorTimer > 3000) {
+    doorClose();
   }
 }
 
-// Common Function
-void moveAndOpen(int angle) {
+// ================= FUNCTIONS =================
+
+void moveServo(int angle) {
   myServo.write(angle);
-  Serial.println("Moved to: " + String(angle));
+  Serial.println("Servo → " + String(angle));
 
   lastDataTime = millis();
-  timeoutActionDone = false;
 
-  delay(2000);
+  doorOpenNow();
+}
 
+void doorOpenNow() {
   doorServo.write(90);
   Serial.println("Door Open");
 
-  delay(2000);
+  digitalWrite(LED_PIN, HIGH);
 
+  doorOpen = true;
+  doorTimer = millis();
+}
+
+void doorClose() {
   doorServo.write(180);
   Serial.println("Door Close");
+
+  digitalWrite(LED_PIN, LOW);
+
+  doorOpen = false;
 }
